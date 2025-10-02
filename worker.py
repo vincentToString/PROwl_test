@@ -49,39 +49,6 @@ async def handle_github(msg: AbstractIncomingMessage):
                     text = await resp.text()
                     log.error(f"GitHub API error {resp.status}: {text}")
 
-        except Exception as e:
-            log.error("Failed to handle GitHub message: %s", e, exc_info=True)
-            await msg.nack(requeue=False)  # DLQ should capture
-
-async def handle_github(msg: AbstractIncomingMessage):
-    """Handle PR review result and post to GitHub as a comment."""
-    async with msg.process(ignore_processed=True):  # auto-ack on success
-        try:
-            data = json.loads(msg.body.decode("utf-8"))
-            repo = data["repo_name"]
-            pr = data["pr_number"]
-
-            # Prefer review_text, fallback to summary
-            review_body = data.get("review_text") or data.get("summary") or "[no review text]"
-
-            log.info(f"Posting review to GitHub PR#{pr} in {repo}:\n{review_body[:200]}...")
-
-            url = f"https://api.github.com/repos/{repo}/issues/{pr}/comments"
-            headers = {
-                "Authorization": f"Bearer {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "PR-Owl-Bot"
-            }
-
-            async with aiohttp.ClientSession() as session:
-                resp = await session.post(url, headers=headers, json={"body": review_body})
-                if resp.status != 201:
-                    text = await resp.text()
-                    log.error(f"GitHub API error {resp.status}: {text}")
-
-        except Exception as e:
-            log.error("Failed to handle GitHub message: %s", e, exc_info=True)
-            await msg.nack(requeue=False)  # DLQ should capture
 
 async def handle_slack(msg: AbstractIncomingMessage):
     """Handle PR review result and post to Slack channel."""
