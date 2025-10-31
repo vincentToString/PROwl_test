@@ -46,16 +46,7 @@ async def handle_message(message: AbstractIncomingMessage, channel):
             return
 
 
-        result = process_event(
-            event_dict,
-            prompt_path=Path(__file__).parent / "prompt.md",
-            model=Config.MODEL,
-            base_url=Config.OPENROUTER_BASE,
-            api_key=Config.OPENROUTER_API_KEY,
-            llm_timeout=Config.LLM_TIMEOUT,
-            max_files=Config.MAX_FILES,
-            max_lines=Config.MAX_LINES,
-        )
+
 
         # if diff_id:
         #     await redis_client.delete_diff(diff_id)
