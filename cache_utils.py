@@ -20,8 +20,11 @@ async def get_pr_metadata(cache, db, pr_id: int) -> Optional[dict]:
         PR metadata dict or None if not found
     """
     # Check cache first
-    cache_key = f"review_pr_{pr_id}"
+    cache_key = f"prowl:review:pr:{pr_id}:v2"
     cached = await cache.get(cache_key)
+
+    if cached == "__NULL__":
+        return None
 
     if cached:
         return json.loads(cached)
@@ -29,12 +32,14 @@ async def get_pr_metadata(cache, db, pr_id: int) -> Optional[dict]:
     # Query database on cache miss
     result = await db.query("SELECT * FROM pull_requests WHERE id = ?", pr_id)
 
-    # Store in cache if found
+    # Store in cache with TTL
     if result:
-        await cache.set(cache_key, json.dumps(result))
+        await cache.set(cache_key, json.dumps(result), ttl=300)
         return result
-
-    return None
+    else:
+        # Cache null result to prevent stampede
+        await cache.set(cache_key, "__NULL__", ttl=60)
+        return None
 
 
 async def update_pr_status(cache, db, pr_id: int, new_status: str) -> bool:
@@ -57,9 +62,8 @@ async def update_pr_status(cache, db, pr_id: int, new_status: str) -> bool:
         pr_id
     )
 
-    # Update cache with new data
-    updated_data = await db.query("SELECT * FROM pull_requests WHERE id = ?", pr_id)
-    cache_key = f"review_pr_{pr_id}"
-    await cache.set(cache_key, json.dumps(updated_data), ttl=600)
+    # Invalidate cache after write
+    cache_key = f"prowl:review:pr:{pr_id}:v2"
+    await cache.delete(cache_key)
 
     return True
