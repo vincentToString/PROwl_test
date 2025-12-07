@@ -27,7 +27,8 @@ async def get_pr_metadata(cache, db, pr_id: int) -> Optional[dict]:
         return json.loads(cached)
 
     # Query database on cache miss
-    result = await db.query("SELECT * FROM pull_requests WHERE id = ?", pr_id)
+    query = f"SELECT * FROM pull_requests WHERE id = {pr_id}"
+    result = await db.query(query)
 
     # Store in cache if found
     if result:
@@ -51,11 +52,8 @@ async def update_pr_status(cache, db, pr_id: int, new_status: str) -> bool:
         True if update succeeded
     """
     # Update database
-    await db.execute(
-        "UPDATE pull_requests SET status = ? WHERE id = ?",
-        new_status,
-        pr_id
-    )
+    query = f"UPDATE pull_requests SET status = '{new_status}' WHERE id = {pr_id}"
+    await db.execute(query)
 
     # Update cache with new data
     updated_data = await db.query("SELECT * FROM pull_requests WHERE id = ?", pr_id)
